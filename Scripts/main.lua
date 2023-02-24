@@ -66,8 +66,22 @@ util_netled = require "netled"
 sys.subscribe("SMS_INC",function(phone,data)
     --来新消息了
     log.info("notify","got sms",phone,data)
-    table.insert(buff,{phone,data})
-    sys.publish("SMS_ADD")--推个事件
+
+    local cmd, tar, msg = string.match(data, "^(#SEND)%s+([+|00]?%d+)%s+(.+)$")
+
+    if (cmd~=nil) then
+        -- 代发短信
+        local r = sms.send(tar, msg)
+
+        if (r == true) then
+            table.insert(buff,{phone, "#SEND\n转发内容：" .. msg .. "\n目标号：" .. tar})
+            sys.publish("SMS_ADD")--推个事件
+        end
+    else
+        -- 短信转发
+        table.insert(buff,{phone,data})
+        sys.publish("SMS_ADD")--推个事件
+    end
 end)
 
 sys.taskInit(function()
